@@ -74,8 +74,11 @@ const lightColors = ["#CC0000", "#38761D", "#FFCC00", "#FFFFFF"];
 let frameCount = 0;
 let loadedImages = {}; // Global deklariert
 
-/* NEUE BILDER-LADE-LOGIK */
+/* NEUE BILDER-LADE-LOGIK - MIT ABSOLUTEN PFADEN */
 function initImages() {
+    // 💥 ANGEPASST: Dein Username und Repository-Name sind nun hart kodiert.
+    const BASE_URL = 'https://snake-pixel-games.github.io/Pixel-Snake-Game/'; 
+    
     return new Promise(resolve => {
         let imagesToLoad = 2; // Wir haben 2 Bilder
         
@@ -89,14 +92,15 @@ function initImages() {
                 }
             };
             img.onerror = () => {
-                console.error(`Fehler beim Laden von: ${src}. Verwende Fallback.`);
+                console.error(`Fehler beim Laden von: ${BASE_URL + src}. Verwende Fallback.`);
                 loadedImages[key] = null; // Markiere als fehlgeschlagen
                 imagesToLoad--;
                 if (imagesToLoad === 0) {
                     resolve();
                 }
             };
-            img.src = src;
+            // Füge BASE_URL vor dem Dateinamen ein
+            img.src = BASE_URL + src; 
         };
 
         // Starte das Laden beider Bilder
@@ -106,8 +110,6 @@ function initImages() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Starte das Laden der Bilder, bevor die Menü-Buttons klickbar werden.
-    // Das Menü ist sofort sichtbar, aber die Bilder sind im Hintergrund.
     initImages().then(() => {
         console.log("Bilderinitialisierung abgeschlossen. Spiel bereit.");
     });
@@ -263,7 +265,7 @@ function drawBorderLights() {
 }
 
 
-/* ZEICHNEN (Hier liegt der Schlüssel zur Bildanzeige) */
+/* ZEICHNEN */
 function drawGame(){
   ctx.fillStyle="#001";
   ctx.fillRect(0,0,FIELD_SIZE,FIELD_SIZE);
@@ -294,7 +296,6 @@ function drawGame(){
 
   /* 2. BÖSES GESCHENK: LEBKUCHENMANN */
   if (badFood) {
-    // 💥 NEUE PRÜFUNG: Prüfe nur, ob das Bild im Speicher ist
     if (loadedImages.evilGingerbread) { 
         // BILD verwenden
         ctx.drawImage(loadedImages.evilGingerbread, badFood.x, badFood.y, C, C);
@@ -321,7 +322,6 @@ function drawGame(){
     const s=snake[i];
 
     if(i===0){
-        // 💥 NEUE PRÜFUNG: Prüfe nur, ob das Bild im Speicher ist
         if (loadedImages.snakeHead) { 
             // BILD verwenden
             ctx.drawImage(loadedImages.snakeHead, s.x, s.y, C, C);
