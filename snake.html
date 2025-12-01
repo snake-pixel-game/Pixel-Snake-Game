@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Pixel Weihnachts Snake – Finale Version mit Bildern & Lichterkette</title>
+<title>Pixel Weihnachts Snake – Finale Version mit reparierter Bild-Logik</title>
 <style>
 /* Feste Weihnachtsfarben für maximale Kompatibilität */
 html, body {
@@ -37,7 +37,6 @@ canvas { width: 600px; height: 600px; background:#001; border:4px solid #CC0000;
 <div id="menu">
   <div>
     <h1>🎅 Pixel-Weihnachts-Snake 🎄</h1>
-    <p style="color:#FFCC00; font-size:18px;">Bilder Lade-Status: <span id="loading-status">Wird geprüft...</span></p>
     <button onclick="startLevel(1)">Level 1 – Score 5 – Langsam</button><br>
     <button onclick="startLevel(2)">Level 2 – Score 10 – Mittel</button><br>
     <button onclick="startLevel(3)">Level 3 – Score 20 – Mittel/Groß</button><br>
@@ -71,53 +70,50 @@ canvas { width: 600px; height: 600px; background:#001; border:4px solid #CC0000;
 const CELL_SIZE = 30; 
 let FIELD_SIZE = 600; 
 let lightColorIndex = 0;
-const lightColors = ["#CC0000", "#38761D", "#FFCC00", "#FFFFFF"]; // Rot, Grün, Gold, Weiß
+const lightColors = ["#CC0000", "#38761D", "#FFCC00", "#FFFFFF"]; 
 let frameCount = 0;
+let loadedImages = {}; // Global deklariert
 
-
-/* BILDER LADEN (Logik optimiert für localhost) */
-const imageFiles = {
-    evilGingerbread: 'gingerbread_evil.png',
-    snakeHead: 'snake_head.png'
-};
-
-const loadedImages = {};
-let loadedCount = 0;
-const totalImages = Object.keys(imageFiles).length;
-const statusElement = document.getElementById('loading-status');
-
-function loadImages(callback) {
-    let imagesToLoad = totalImages;
-
-    for (const key in imageFiles) {
-        const img = new Image();
-        img.onload = () => {
-            loadedCount++;
-            statusElement.textContent = `${loadedCount}/${totalImages} (Geladen)`;
-            if (--imagesToLoad === 0) {
-                statusElement.style.color = '#38761D'; // Grün
-                callback();
-            }
+/* NEUE BILDER-LADE-LOGIK */
+function initImages() {
+    return new Promise(resolve => {
+        let imagesToLoad = 2; // Wir haben 2 Bilder
+        
+        const loadImg = (key, src) => {
+            const img = new Image();
+            img.onload = () => {
+                loadedImages[key] = img;
+                imagesToLoad--;
+                if (imagesToLoad === 0) {
+                    resolve(); // Alle Bilder geladen
+                }
+            };
+            img.onerror = () => {
+                console.error(`Fehler beim Laden von: ${src}. Verwende Fallback.`);
+                loadedImages[key] = null; // Markiere als fehlgeschlagen
+                imagesToLoad--;
+                if (imagesToLoad === 0) {
+                    resolve();
+                }
+            };
+            img.src = src;
         };
-        img.onerror = () => {
-            console.error(`Bild nicht gefunden/geladen: ${imageFiles[key]}. Verwende manuelle Zeichnung.`);
-            loadedImages[key] = null; 
-            if (--imagesToLoad === 0) {
-                statusElement.style.color = '#CC0000'; // Rot
-                statusElement.textContent = `Fehler: ${totalImages - loadedCount}/${totalImages} fehlend.`;
-                callback();
-            }
-        };
-        img.src = imageFiles[key];
-        loadedImages[key] = img;
-    }
+
+        // Starte das Laden beider Bilder
+        loadImg('evilGingerbread', 'gingerbread_evil.png');
+        loadImg('snakeHead', 'snake_head.png');
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadImages(() => {
-        // Spiel ist bereit, auch wenn Bilder fehlen.
+    // Starte das Laden der Bilder, bevor die Menü-Buttons klickbar werden.
+    // Das Menü ist sofort sichtbar, aber die Bilder sind im Hintergrund.
+    initImages().then(() => {
+        console.log("Bilderinitialisierung abgeschlossen. Spiel bereit.");
     });
 });
+/* Ende der neuen Logik */
+
 
 /* SCHNEE & VOLLBILD (Unverändert) */
 setInterval(()=>{
@@ -153,7 +149,7 @@ let scoreGoal=5;
 let gameSpeed = 120;
 let currentLevel = 1; 
 
-/* LEVEL START (Angepasst für größere Felder ab Level 3) */
+/* LEVEL START (Angepasst) */
 function startLevel(level){
   const menu = document.getElementById("menu");
   currentLevel = level; 
@@ -177,7 +173,6 @@ function startLevel(level){
     
     scoreGoal = level===1 ? 5 : level===2 ? 10 : level===3 ? 20 : level===4 ? 30 : 40; 
     
-    // Geschwindigkeit angepasst: Level 3 ist jetzt etwas langsamer als 4/5 wegen der Feldgröße
     gameSpeed = level===1 ? 140 : level===2 ? 100 : level===3 ? 120 : level===4 ? 90 : 80;
 
     resetGame();
@@ -243,9 +238,8 @@ function getFreeCell() {
 function placeGoodFood(){ goodFood = getFreeCell(); }
 function placeBadFood(){ badFood = getFreeCell(); }
 
-/* NEU: Lichterketten-Funktion */
+/* Lichterketten-Funktion */
 function drawBorderLights() {
-    // Steuert, wann die Farbe wechselt (alle 3 Frames)
     if (frameCount % 3 === 0) {
         lightColorIndex = (lightColorIndex + 1) % lightColors.length;
     }
@@ -253,33 +247,139 @@ function drawBorderLights() {
     const borderSize = 3;
     const lightSize = 3; 
     
-    // Zeichne Lichter entlang der Kanten
     ctx.fillStyle = color;
 
     // Oben und Unten
     for (let x = 0; x < FIELD_SIZE; x += CELL_SIZE) {
-        ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, 0, lightSize, borderSize); // Oben
-        ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, FIELD_SIZE - borderSize, lightSize, borderSize); // Unten
+        ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, 0, lightSize, borderSize); 
+        ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, FIELD_SIZE - borderSize, lightSize, borderSize); 
     }
     // Links und Rechts
     for (let y = 0; y < FIELD_SIZE; y += CELL_SIZE) {
-        ctx.fillRect(0, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); // Links
-        ctx.fillRect(FIELD_SIZE - borderSize, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); // Rechts
+        ctx.fillRect(0, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); 
+        ctx.fillRect(FIELD_SIZE - borderSize, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); 
     }
     frameCount++;
 }
 
 
-/* ZEICHNEN */
+/* ZEICHNEN (Hier liegt der Schlüssel zur Bildanzeige) */
 function drawGame(){
   ctx.fillStyle="#001";
   ctx.fillRect(0,0,FIELD_SIZE,FIELD_SIZE);
 
-  // NEU: Rufe die Lichterketten-Funktion auf, bevor Spielobjekte gezeichnet werden
   drawBorderLights(); 
 
   const C = CELL_SIZE; 
 
-  // Zeige aktuellen Score
   const currentScore = snake.length - 1;
-  ctx.fillStyle = currentScore < 0 ? "#CC0
+  ctx.fillStyle = currentScore < 0 ? "#CC0000" : "#FFFFFF"; 
+  ctx.font = "18px 'Arial Black'"; 
+  ctx.fillText(`Score: ${currentScore} / ${scoreGoal}`, 10, 25);
+
+
+  /* 1. GUTES GESCHENK (Zeichnung) */
+  if (goodFood) {
+    const G_X = goodFood.x;
+    const G_Y = goodFood.y;
+    ctx.fillStyle="#CC0000"; 
+    ctx.fillRect(G_X, G_Y, C, C);
+    ctx.fillStyle="#FFCC00"; 
+    ctx.fillRect(G_X, G_Y + C/2 - 4, C, 8); 
+    ctx.fillRect(G_X + C/2 - 4, G_Y, 8, C); 
+    ctx.fillRect(G_X + 4, G_Y + 4, 8, 8); 
+    ctx.fillRect(G_X + C - 12, G_Y + 4, 8, 8); 
+    ctx.fillRect(G_X + C/2 - 4, G_Y + C/2 - 4, 8, 8); 
+  }
+
+  /* 2. BÖSES GESCHENK: LEBKUCHENMANN */
+  if (badFood) {
+    // 💥 NEUE PRÜFUNG: Prüfe nur, ob das Bild im Speicher ist
+    if (loadedImages.evilGingerbread) { 
+        // BILD verwenden
+        ctx.drawImage(loadedImages.evilGingerbread, badFood.x, badFood.y, C, C);
+    } else {
+        // FALLBACK-ZEICHNUNG
+        const B_X = badFood.x;
+        const B_Y = badFood.y;
+        ctx.fillStyle = '#654321'; 
+        ctx.fillRect(B_X + 5, B_Y + 5, C - 10, C - 10); 
+        ctx.fillStyle = '#FFFFFF'; 
+        ctx.fillRect(B_X + 8, B_Y + 5, C - 16, C - 18); 
+        ctx.fillStyle = '#000000'; 
+        ctx.fillRect(B_X + 10, B_Y + 9, 3, 3);
+        ctx.fillRect(B_X + 17, B_Y + 9, 3, 3);
+        ctx.fillStyle = '#FFFFFF'; 
+        ctx.beginPath();
+        ctx.arc(B_X + C / 2, B_Y + 22, 5, 0, Math.PI, true); 
+        ctx.fill();
+    }
+  }
+  
+  /* 3. SNAKE */
+  for(let i=0;i<snake.length;i++){
+    const s=snake[i];
+
+    if(i===0){
+        // 💥 NEUE PRÜFUNG: Prüfe nur, ob das Bild im Speicher ist
+        if (loadedImages.snakeHead) { 
+            // BILD verwenden
+            ctx.drawImage(loadedImages.snakeHead, s.x, s.y, C, C);
+        } else {
+            // FALLBACK-ZEICHNUNG
+            ctx.fillStyle="#CC0000"; 
+            ctx.fillRect(s.x, s.y, C, C);
+            ctx.fillStyle="#FFFFFF"; 
+            ctx.fillRect(s.x, s.y + 4, C, 4);
+            ctx.fillStyle="#38761D"; 
+            ctx.fillRect(s.x, s.y + 8, C, C - 8);
+            ctx.fillStyle="#000000"; 
+            ctx.fillRect(s.x + 8, s.y + 12, 4, 4);
+            ctx.fillRect(s.x + 18, s.y + 12, 4, 4);
+        }
+    } else {
+      // Körper: Helles Grün
+      ctx.fillStyle="#38761D"; 
+      ctx.fillRect(s.x + 3, s.y + 3, C - 6, C - 6);
+    }
+  }
+}
+
+/* SCREEN LOGIK & STEUERUNG (Unverändert) */
+function showWin(){ clearInterval(tickTimer); document.getElementById("win").style.display="grid"; document.getElementById("win").style.opacity = 1; }
+function closeWin(){
+  document.getElementById("win").style.opacity = 0;
+  setTimeout(() => {
+    document.getElementById("win").style.display="none";
+    document.getElementById("menu").style.display="grid";
+    document.getElementById("menu").style.opacity = 1; 
+    canvas.style.display="none"; canvas.style.opacity = 0;
+  }, 400); 
+}
+function showGameOver(){ clearInterval(tickTimer); document.getElementById("gameOver").style.display="grid"; document.getElementById("gameOver").style.opacity = 1; }
+function closeGameOver(){
+  document.getElementById("gameOver").style.opacity = 0;
+  setTimeout(() => {
+    document.getElementById("gameOver").style.display="none";
+    document.getElementById("menu").style.display="grid";
+    document.getElementById("menu").style.opacity = 1; 
+    canvas.style.display="none"; canvas.style.opacity = 0;
+  }, 400); 
+}
+function retryGame() {
+    document.getElementById("gameOver").style.opacity = 0;
+    setTimeout(() => {
+        document.getElementById("gameOver").style.display = "none";
+        startLevel(currentLevel); 
+    }, 400); 
+}
+document.addEventListener("keydown", e=>{
+  if(e.key==="ArrowUp" && dy===0 && dx!==0){ dx=0; dy=-CELL_SIZE; }
+  else if(e.key==="ArrowDown" && dy===0 && dx!==0){ dx=0; dy=CELL_SIZE; }
+  else if(e.key==="ArrowLeft" && dx===0 && dy!==0){ dx=-CELL_SIZE; dy=0; }
+  else if(e.key==="ArrowRight" && dx===0 && dy!==0){ dx=CELL_SIZE; dy=0; }
+});
+</script>
+
+</body>
+</html>
