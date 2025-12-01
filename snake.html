@@ -2,27 +2,30 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Pixel Weihnachts Snake – Mobile Ready Version (Final V2)</title>
+<title>Pixel Weihnachts Snake – Mobile Ready Version (Final & Robust)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-/* Feste Weihnachtsfarben für maximale Kompatibilität */
+/* Feste Weihnachtsfarben & Basis-Layout */
 html, body {
   margin:0; padding:0; height:100%; background:#001; font-family: 'Arial Black', monospace; overflow:hidden;
 }
-/* Vereinfachte Animationen für mehr Stabilität */
+/* CSS für den mobilen Modus, wird durch JavaScript aktiviert */
+body.mobile-mode {
+    display: flex; /* Flexbox für bessere Zentrierung */
+    justify-content: center;
+    align-items: center;
+}
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes titlePulse { 0%, 100% { transform: scale(1); text-shadow: 3px 3px #FFFFFF; } 50% { transform: scale(1.03); text-shadow: 5px 5px #FFCC00; } }
 
 #menu { 
     position:absolute; inset:0; 
-    display:grid; 
-    place-items:center; 
-    text-align:center; 
-    color:#FFFFFF; 
-    background:#003300; 
+    display:grid; place-items:center; text-align:center; 
+    color:#FFFFFF; background:#003300; 
     animation: fadeIn 0.5s ease-out forwards; 
-    opacity: 1; /* Muss 1 sein, damit es sichtbar ist */
-    transition: opacity 0.4s ease-out; 
+    opacity: 1; transition: opacity 0.4s ease-out; 
+    z-index: 100;
 }
 #menu h1 { 
     font-size: 48px; color: #CC0000; 
@@ -32,18 +35,15 @@ html, body {
     border-radius: 15px; margin-bottom: 20px; 
     animation: titlePulse 3s infinite alternate ease-in-out; 
 }
-/* Buttons benötigen keine komplexen Verzögerungen mehr, nur fade-in */
+
 button { 
     padding:15px 30px; margin:12px; 
-    font-size:22px; 
-    border:2px solid #FFFFFF; 
-    border-radius:10px; 
-    background:#CC0000; 
-    color:#FFFFFF; 
-    cursor:pointer; 
+    font-size:22px; border:2px solid #FFFFFF; 
+    border-radius:10px; background:#CC0000; 
+    color:#FFFFFF; cursor:pointer; 
     box-shadow:0 4px 15px rgba(0,0,0,0.5); 
     transition: transform 0.1s, box-shadow 0.2s, background 0.2s; 
-    opacity: 1; /* Wichtig: Standard-Buttons sind sichtbar */
+    opacity: 1;
 }
 button.settings { 
     background: #FFCC00; color: #003300; 
@@ -57,52 +57,61 @@ button:hover {
 button.settings:hover { background: #FFE050; color: #003300; }
 
 canvas { 
-    width: 600px; height: 600px; 
     background:#001; border:4px solid #CC0000; 
-    box-shadow: 0 0 20px #38761D; margin:auto; 
-    display:none; /* Wichtig: Startet unsichtbar */
+    box-shadow: 0 0 20px #38761D; 
+    margin:auto; display:none; 
     image-rendering:pixelated; image-rendering: crisp-edges; 
     transition: opacity 0.5s ease-in; opacity: 0; 
 }
-#win, #gameOver { 
-    position:absolute; inset:0; 
-    display:none; 
-    place-items:center; 
-    background:rgba(0,0,0,0.85); 
-    font-size:40px; 
-    text-align:center; 
-    animation: fadeIn 0.4s ease-out forwards; 
-    opacity: 0; 
-    transition: opacity 0.4s ease-out; 
-}
-#win div, #gameOver div { 
-    padding: 40px; border-radius: 15px; 
-    box-shadow: 0 0 30px #FFFFFF; 
+
+/* Anpassung der Canvas-Größe für den mobilen Modus */
+body.mobile-mode #game {
+    width: 300px !important; /* Maximale Größe für kleine Bildschirme */
+    height: 300px !important;
+    border-width: 2px;
+    box-shadow: 0 0 10px #38761D;
 }
 
+#win, #gameOver { position:absolute; inset:0; display:none; place-items:center; background:rgba(0,0,0,0.85); font-size:40px; text-align:center; animation: fadeIn 0.4s ease-out forwards; opacity: 0; transition: opacity 0.4s ease-out; z-index: 50; }
+#win div, #gameOver div { padding: 40px; border-radius: 15px; box-shadow: 0 0 30px #FFFFFF; }
 #win { color:#FFCC00; text-shadow:3px 3px #CC0000; }
 #gameOver { color:#CC0000; text-shadow:3px 3px #FFFFFF; }
 .snowflake { width:4px; height:4px; border-radius: 50%; background:#FFFFFF; position:fixed; top:-10px; animation:fall linear infinite; image-rendering:pixelated; }
 
-/* Mobile Steuerung Styles */
+/* Mobile Steuerung Styles - GRÖSSER & ROBUSTER */
 #controls {
-    position: fixed; bottom: 20px; left: 50%;
-    transform: translateX(-50%);
-    width: 300px; height: 150px; 
+    position: fixed; bottom: 0; left: 0;
+    width: 100%; height: 200px; /* Mehr Platz für Steuerung */
     display: none; 
     z-index: 1000;
 }
 .control-btn {
-    position: absolute; width: 80px; height: 60px;
-    background: rgba(204, 0, 0, 0.85); color: white; font-size: 30px;
-    border: 3px solid #FFCC00; border-radius: 10px;
+    position: absolute;
+    width: 90px; height: 90px; 
+    background: rgba(204, 0, 0, 0.9); 
+    color: white; font-size: 40px;
+    border: 4px solid #FFCC00; border-radius: 15px;
     display: flex; justify-content: center; align-items: center;
-    user-select: none; touch-action: manipulation;
+    user-select: none; touch-action: manipulation; /* Wichtig für Touch */
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
-#up-btn { top: 0px; left: 110px; }
-#down-btn { bottom: 0px; left: 110px; }
-#left-btn { top: 50px; left: 10px; }
-#right-btn { top: 50px; right: 10px; }
+#up-btn { top: 0px; left: 50%; transform: translateX(-50%); }
+#down-btn { bottom: 0px; left: 50%; transform: translateX(-50%); }
+#left-btn { top: 90px; left: calc(50% - 100px); }
+#right-btn { top: 90px; right: calc(50% - 100px); }
+/* Überlappt die Buttons, wenn die Bildschirmbreite unter 400px liegt, zentriert */
+@media screen and (max-width: 400px) {
+    #controls {
+        width: 90%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    #up-btn { left: 50%; transform: translateX(-50%); }
+    #down-btn { left: 50%; transform: translateX(-50%); }
+    #left-btn { left: 0; top: 90px; }
+    #right-btn { right: 0; top: 90px; }
+}
+
 </style>
 </head>
 <body>
@@ -110,13 +119,13 @@ canvas {
 <div id="menu">
   <div>
     <h1>🎅 Pixel-Weihnachts-Snake 🎄</h1>
-    <button onclick="startLevel(1, false)">Level 1 – Score 5 – Langsam</button><br>
-    <button onclick="startLevel(2, false)">Level 2 – Score 10 – Mittel</button><br>
-    <button onclick="startLevel(3, false)">Level 3 – Score 20 – Mittel/Groß</button><br>
-    <button onclick="startLevel(4, false)">Level 4 – Score 30 – Schnell/Sehr Groß</button><br>
-    <button onclick="startLevel(5, false)">Level 5 – Score 40 – EXTREM/Sehr Groß</button>
+    <button onclick="startLevel(1)">Level 1 – Score 5 – Langsam</button><br>
+    <button onclick="startLevel(2)">Level 2 – Score 10 – Mittel</button><br>
+    <button onclick="startLevel(3)">Level 3 – Score 20 – Mittel/Groß</button><br>
+    <button onclick="startLevel(4)">Level 4 – Score 30 – Schnell/Sehr Groß</button><br>
+    <button onclick="startLevel(5)">Level 5 – Score 40 – EXTREM/Sehr Groß</button>
     <br>
-    <button id="mobileToggleBtn" onclick="toggleMobileControls(true)" class="settings">📱 Handy-Steuerung aktivieren</button>
+    <button id="mobileToggleBtn" onclick="toggleMobileMode()" class="settings">📱 Mobiler Modus aktivieren</button>
     <button onclick="toggleFullscreen()" class="settings">🖥️ Vollbild umschalten</button>
   </div>
 </div>
@@ -124,10 +133,10 @@ canvas {
 <canvas id="game" width="600" height="600"></canvas>
 
 <div id="controls">
-    <div class="control-btn" ontouchstart="setDirection('Up')">⬆️</div>
-    <div class="control-btn" ontouchstart="setDirection('Down')">⬇️</div>
-    <div class="control-btn" ontouchstart="setDirection('Left')">⬅️</div>
-    <div class="control-btn" ontouchstart="setDirection('Right')">➡️</div>
+    <div id="up-btn" class="control-btn" ontouchstart="setDirection('Up')">⬆️</div>
+    <div id="down-btn" class="control-btn" ontouchstart="setDirection('Down')">⬇️</div>
+    <div id="left-btn" class="control-btn" ontouchstart="setDirection('Left')">⬅️</div>
+    <div id="right-btn" class="control-btn" ontouchstart="setDirection('Right')">➡️</div>
 </div>
 
 <div id="win">
@@ -153,25 +162,36 @@ let FIELD_SIZE = 600;
 let lightColorIndex = 0;
 const lightColors = ["#CC0000", "#38761D", "#FFCC00", "#FFFFFF"]; 
 let frameCount = 0;
-let mobileControlsActive = false;
+let mobileControlsActive = false; // Steuerung ist Teil des mobilen Modus
+let currentCountdown = 0; // Für den Countdown
 
 /* DOM-ELEMENTE */
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const controls = document.getElementById("controls");
 const mobileToggleBtn = document.getElementById("mobileToggleBtn");
+const body = document.body;
 
-/* HANDY-STEUERUNG LOGIK */
-function toggleMobileControls(){
+/* HANDY-MODUS LOGIK */
+function toggleMobileMode(){
     mobileControlsActive = !mobileControlsActive;
+
     if(mobileControlsActive){
-        alert("Handy-Steuerung aktiviert! Im nächsten Spiel werden die Pfeiltasten auf dem Bildschirm angezeigt.");
-        mobileToggleBtn.innerText = "📱 Handy-Steuerung deaktivieren";
+        body.classList.add('mobile-mode');
+        mobileToggleBtn.innerText = "🖥️ Mobiler Modus deaktivieren";
+        alert("Mobiler Modus aktiviert! Das Spielfeld wird für Handys optimiert.");
     } else {
-        mobileToggleBtn.innerText = "📱 Handy-Steuerung aktivieren";
+        body.classList.remove('mobile-mode');
+        mobileToggleBtn.innerText = "📱 Mobiler Modus aktivieren";
+        // Muss die Canvas-Größe zurücksetzen, falls sie im Spiel war
+        if (canvas.style.display === 'block') {
+             canvas.style.width = FIELD_SIZE + 'px';
+             canvas.style.height = FIELD_SIZE + 'px';
+        }
     }
 }
 
+/* MOBILE/TASTATUR STEUERUNG */
 function setDirection(key) {
     if(key === 'Up' && dy === 0 && dx !== 0){ dx = 0; dy = -CELL_SIZE; }
     else if(key === 'Down' && dy === 0 && dx !== 0){ dx = 0; dy = CELL_SIZE; }
@@ -179,38 +199,7 @@ function setDirection(key) {
     else if(key === 'Right' && dx === 0 && dy !== 0){ dx = CELL_SIZE; dy = 0; }
 }
 
-/* SCHNEE & VOLLBILD (Unverändert) */
-setInterval(()=>{
-  const s=document.createElement('div');
-  s.className='snowflake';
-  s.style.left=Math.random()*100+'vw';
-  s.style.width = s.style.height = (2 + Math.random() * 4) + 'px';
-  s.style.animationDuration=(3+Math.random()*5)+'s';
-  s.style.opacity = 0.8 - Math.random() * 0.4;
-  document.body.appendChild(s);
-  setTimeout(()=>s.remove(),8000);
-},100);
-
-function toggleFullscreen() {
-  const elem = document.documentElement;
-  if (document.fullscreenElement) {
-    if (document.exitFullscreen) { document.exitFullscreen(); }
-  } else {
-    if (elem.requestFullscreen) { elem.requestFullscreen(); } 
-    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
-    else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
-  }
-}
-
-/* VARIABLEN */
-let snake=[], dx=CELL_SIZE, dy=0;
-let goodFood, badFood; 
-let tickTimer=null;
-let scoreGoal=5;
-let gameSpeed = 120;
-let currentLevel = 1; 
-
-/* LEVEL START (Angepasst) */
+/* LEVEL START (Countdown hinzugefügt) */
 function startLevel(level){
   const menu = document.getElementById("menu");
   currentLevel = level; 
@@ -219,10 +208,14 @@ function startLevel(level){
   
   canvas.width = FIELD_SIZE;
   canvas.height = FIELD_SIZE;
-  canvas.style.width = FIELD_SIZE + 'px';
-  canvas.style.height = FIELD_SIZE + 'px';
+  
+  // Im mobilen Modus wird die Darstellung durch CSS geregelt
+  if (!mobileControlsActive) {
+    canvas.style.width = FIELD_SIZE + 'px';
+    canvas.style.height = FIELD_SIZE + 'px';
+  }
 
-  // Mobile Steuerung anzeigen, wenn aktiviert
+  // Mobile Steuerung anzeigen
   controls.style.display = mobileControlsActive ? 'block' : 'none';
 
   menu.style.opacity = 0;
@@ -236,14 +229,33 @@ function startLevel(level){
     setTimeout(() => { canvas.style.opacity = 1; }, 50); 
     
     scoreGoal = level===1 ? 5 : level===2 ? 10 : level===3 ? 20 : level===4 ? 30 : 40; 
-    
     gameSpeed = level===1 ? 140 : level===2 ? 100 : level===3 ? 120 : level===4 ? 90 : 80;
 
-    resetGame();
+    // Startet den Countdown
+    startCountdown();
   }, 400); 
 }
 
-/* SPIEL LOGIK (Unverändert) */
+/* 5-SEKUNDEN COUNTDOWN LOGIK */
+function startCountdown() {
+    currentCountdown = 5; // Start bei 5
+    if(tickTimer) clearInterval(tickTimer);
+    
+    // Countdown-Loop: Zeichnet alle 1 Sekunde
+    tickTimer = setInterval(() => {
+        drawGame(true); // Zeichne mit Countdown-Overlay
+        
+        if (currentCountdown <= 0) {
+            clearInterval(tickTimer);
+            resetGame(); // Startet das Spiel
+        } else {
+            currentCountdown--;
+        }
+    }, 1000);
+}
+
+
+/* SPIEL LOGIK & ZEICHNEN */
 function resetGame(){
   const startPos = Math.floor(FIELD_SIZE / 2 / CELL_SIZE) * CELL_SIZE;
   snake=[{x: startPos, y: startPos}];
@@ -252,13 +264,16 @@ function resetGame(){
   placeBadFood();
 
   if(tickTimer) clearInterval(tickTimer);
+  // Startet die Haupt-GameLoop mit der Level-Geschwindigkeit
   tickTimer=setInterval(gameLoop, gameSpeed);
 }
 function gameLoop(){
   if (checkCollision()) { showGameOver(); return; }
   moveSnake();
-  drawGame();
+  drawGame(false); // Zeichne ohne Countdown
 }
+// (Unveränderte Funktionen für moveSnake, checkCollision, placeFood, drawBorderLights)
+
 function checkCollision() {
   const head = {x: snake[0].x + dx, y: snake[0].y + dy};
   if(head.x<0 || head.x>=FIELD_SIZE || head.y<0 || head.y>=FIELD_SIZE){ return true; }
@@ -282,7 +297,6 @@ function moveSnake(){
   if (!collected) { snake.pop(); }
 }
 
-/* ESSEN PLATZIEREN (Unverändert) */
 function getFreeCell() {
   let newPos;
   const maxCells = FIELD_SIZE / CELL_SIZE; 
@@ -302,7 +316,6 @@ function getFreeCell() {
 function placeGoodFood(){ goodFood = getFreeCell(); }
 function placeBadFood(){ badFood = getFreeCell(); }
 
-/* Lichterketten-Funktion */
 function drawBorderLights() {
     if (frameCount % 3 === 0) {
         lightColorIndex = (lightColorIndex + 1) % lightColors.length;
@@ -313,12 +326,10 @@ function drawBorderLights() {
     
     ctx.fillStyle = color;
 
-    // Oben und Unten
     for (let x = 0; x < FIELD_SIZE; x += CELL_SIZE) {
         ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, 0, lightSize, borderSize); 
         ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, FIELD_SIZE - borderSize, lightSize, borderSize); 
     }
-    // Links und Rechts
     for (let y = 0; y < FIELD_SIZE; y += CELL_SIZE) {
         ctx.fillRect(0, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); 
         ctx.fillRect(FIELD_SIZE - borderSize, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); 
@@ -327,8 +338,7 @@ function drawBorderLights() {
 }
 
 
-/* ZEICHNEN */
-function drawGame(){
+function drawGame(isCountdown){
   ctx.fillStyle="#001";
   ctx.fillRect(0,0,FIELD_SIZE,FIELD_SIZE);
 
@@ -394,9 +404,23 @@ function drawGame(){
       ctx.fillRect(s.x + 3, s.y + 3, C - 6, C - 6);
     }
   }
+
+  // COUNTDOWN OVERLAY
+  if (isCountdown) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(0, 0, FIELD_SIZE, FIELD_SIZE);
+    
+    ctx.fillStyle = "#FFCC00";
+    ctx.font = "90px 'Arial Black'";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    
+    const text = currentCountdown === 0 ? "GO!" : currentCountdown.toString();
+    ctx.fillText(text, FIELD_SIZE / 2, FIELD_SIZE / 2);
+  }
 }
 
-/* SCREEN LOGIK & STEUERUNG (Erweitert) */
+/* SCREEN LOGIK & STEUERUNG */
 function hideUI(){ controls.style.display = 'none'; }
 function showUI(){ controls.style.display = mobileControlsActive ? 'block' : 'none'; }
 
@@ -437,6 +461,30 @@ document.addEventListener("keydown", e=>{
   else if(e.key==="ArrowLeft"){ setDirection('Left'); }
   else if(e.key==="ArrowRight"){ setDirection('Right'); }
 });
+
+/* SCHNEE */
+setInterval(()=>{
+  const s=document.createElement('div');
+  s.className='snowflake';
+  s.style.left=Math.random()*100+'vw';
+  s.style.width = s.style.height = (2 + Math.random() * 4) + 'px';
+  s.style.animationDuration=(3+Math.random()*5)+'s';
+  s.style.opacity = 0.8 - Math.random() * 0.4;
+  document.body.appendChild(s);
+  setTimeout(()=>s.remove(),8000);
+},100);
+
+/* VOLLBILD */
+function toggleFullscreen() {
+  const elem = document.documentElement;
+  if (document.fullscreenElement) {
+    if (document.exitFullscreen) { document.exitFullscreen(); }
+  } else {
+    if (elem.requestFullscreen) { elem.requestFullscreen(); } 
+    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+    else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+  }
+}
 </script>
 
 </body>
