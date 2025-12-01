@@ -164,6 +164,7 @@ const lightColors = ["#CC0000", "#38761D", "#FFCC00", "#FFFFFF"];
 let frameCount = 0;
 let mobileControlsActive = false; // Steuerung ist Teil des mobilen Modus
 let currentCountdown = 0; // Für den Countdown
+let gameIsRunning = false; // Neuer Status-Flag
 
 /* DOM-ELEMENTE */
 const canvas=document.getElementById("game");
@@ -183,7 +184,6 @@ function toggleMobileMode(){
     } else {
         body.classList.remove('mobile-mode');
         mobileToggleBtn.innerText = "📱 Mobiler Modus aktivieren";
-        // Muss die Canvas-Größe zurücksetzen, falls sie im Spiel war
         if (canvas.style.display === 'block') {
              canvas.style.width = FIELD_SIZE + 'px';
              canvas.style.height = FIELD_SIZE + 'px';
@@ -203,19 +203,29 @@ function setDirection(key) {
 function startLevel(level){
   const menu = document.getElementById("menu");
   currentLevel = level; 
-
-  FIELD_SIZE = level <= 2 ? 600 : level === 3 ? 660 : 720;
+  gameIsRunning = false; // Spiel startet noch nicht
   
+  // Setze die Größe
+  FIELD_SIZE = level <= 2 ? 600 : level === 3 ? 660 : 720;
   canvas.width = FIELD_SIZE;
   canvas.height = FIELD_SIZE;
-  
-  // Im mobilen Modus wird die Darstellung durch CSS geregelt
   if (!mobileControlsActive) {
     canvas.style.width = FIELD_SIZE + 'px';
     canvas.style.height = FIELD_SIZE + 'px';
   }
 
-  // Mobile Steuerung anzeigen
+  // Setze Spiel-Parameter
+  scoreGoal = level===1 ? 5 : level===2 ? 10 : level===3 ? 20 : level===4 ? 30 : 40; 
+  gameSpeed = level===1 ? 140 : level===2 ? 100 : level===3 ? 120 : level===4 ? 90 : 80;
+
+  // Initialisiere Schlange und Essen, bevor das Menü ausgeblendet wird
+  const startPos = Math.floor(FIELD_SIZE / 2 / CELL_SIZE) * CELL_SIZE;
+  snake=[{x: startPos, y: startPos}];
+  dx=CELL_SIZE; dy=0;
+  placeGoodFood(); 
+  placeBadFood();
+
+  // Steuerung anzeigen
   controls.style.display = mobileControlsActive ? 'block' : 'none';
 
   menu.style.opacity = 0;
@@ -228,9 +238,6 @@ function startLevel(level){
     canvas.style.display="block";
     setTimeout(() => { canvas.style.opacity = 1; }, 50); 
     
-    scoreGoal = level===1 ? 5 : level===2 ? 10 : level===3 ? 20 : level===4 ? 30 : 40; 
-    gameSpeed = level===1 ? 140 : level===2 ? 100 : level===3 ? 120 : level===4 ? 90 : 80;
-
     // Startet den Countdown
     startCountdown();
   }, 400); 
@@ -243,9 +250,10 @@ function startCountdown() {
     
     // Countdown-Loop: Zeichnet alle 1 Sekunde
     tickTimer = setInterval(() => {
-        drawGame(true); // Zeichne mit Countdown-Overlay
+        // Zeichne das Spielfeld mit Schlange/Essen, aber überlagere mit Countdown
+        drawGame(true); 
         
-        if (currentCountdown <= 0) {
+        if (currentCountdown < 0) { // GO! wird 1 Sekunde lang angezeigt (bei currentCountdown == 0)
             clearInterval(tickTimer);
             resetGame(); // Startet das Spiel
         } else {
@@ -257,12 +265,9 @@ function startCountdown() {
 
 /* SPIEL LOGIK & ZEICHNEN */
 function resetGame(){
-  const startPos = Math.floor(FIELD_SIZE / 2 / CELL_SIZE) * CELL_SIZE;
-  snake=[{x: startPos, y: startPos}];
-  dx=CELL_SIZE; dy=0;
-  placeGoodFood(); 
-  placeBadFood();
-
+  // Die Initialisierung ist bereits in startLevel passiert.
+  // Jetzt wird nur noch der Timer für das Laufen des Spiels gestartet.
+  gameIsRunning = true;
   if(tickTimer) clearInterval(tickTimer);
   // Startet die Haupt-GameLoop mit der Level-Geschwindigkeit
   tickTimer=setInterval(gameLoop, gameSpeed);
@@ -415,7 +420,7 @@ function drawGame(isCountdown){
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     
-    const text = currentCountdown === 0 ? "GO!" : currentCountdown.toString();
+    const text = currentCountdown < 0 ? "GO!" : currentCountdown.toString();
     ctx.fillText(text, FIELD_SIZE / 2, FIELD_SIZE / 2);
   }
 }
@@ -424,7 +429,7 @@ function drawGame(isCountdown){
 function hideUI(){ controls.style.display = 'none'; }
 function showUI(){ controls.style.display = mobileControlsActive ? 'block' : 'none'; }
 
-function showWin(){ clearInterval(tickTimer); document.getElementById("win").style.display="grid"; document.getElementById("win").style.opacity = 1; hideUI(); }
+function showWin(){ clearInterval(tickTimer); document.getElementById("win").style.display="grid"; document.getElementById("win").style.opacity = 1; hideUI(); gameIsRunning = false; }
 function closeWin(){
   document.getElementById("win").style.opacity = 0;
   setTimeout(() => {
@@ -435,7 +440,7 @@ function closeWin(){
     showUI();
   }, 400); 
 }
-function showGameOver(){ clearInterval(tickTimer); document.getElementById("gameOver").style.display="grid"; document.getElementById("gameOver").style.opacity = 1; hideUI(); }
+function showGameOver(){ clearInterval(tickTimer); document.getElementById("gameOver").style.display="grid"; document.getElementById("gameOver").style.opacity = 1; hideUI(); gameIsRunning = false; }
 function closeGameOver(){
   document.getElementById("gameOver").style.opacity = 0;
   setTimeout(() => {
