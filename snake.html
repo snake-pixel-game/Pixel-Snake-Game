@@ -2,112 +2,86 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Pixel Weihnachts Snake – Mobile Ready Version (Final & Robust)</title>
+<title>Pixel Weihnachts Snake – ULTIMATIVE EDITION</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-/* Feste Weihnachtsfarben & Basis-Layout */
+/* --- STYLES --- */
 html, body {
   margin:0; padding:0; height:100%; background:#001; font-family: 'Arial Black', monospace; overflow:hidden;
 }
-/* CSS für den mobilen Modus, wird durch JavaScript aktiviert */
+
+/* Mobiler Modus (für kleinere Canvas-Anzeige) */
 body.mobile-mode {
-    display: flex; /* Flexbox für bessere Zentrierung */
-    justify-content: center;
-    align-items: center;
+    display: flex; justify-content: center; align-items: center;
+    background-color: #000; 
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes titlePulse { 0%, 100% { transform: scale(1); text-shadow: 3px 3px #FFFFFF; } 50% { transform: scale(1.03); text-shadow: 5px 5px #FFCC00; } }
 
+/* Menü */
 #menu { 
-    position:absolute; inset:0; 
-    display:grid; place-items:center; text-align:center; 
-    color:#FFFFFF; background:#003300; 
-    animation: fadeIn 0.5s ease-out forwards; 
-    opacity: 1; transition: opacity 0.4s ease-out; 
-    z-index: 100;
+    position:absolute; inset:0; display:grid; place-items:center; text-align:center; 
+    color:#FFFFFF; background:#003300; animation: fadeIn 0.5s ease-out forwards; 
+    opacity: 1; transition: opacity 0.4s ease-out; z-index: 100;
 }
 #menu h1 { 
-    font-size: 48px; color: #CC0000; 
-    text-shadow: 3px 3px #FFFFFF; 
-    padding: 10px; border: 3px solid #FFFFFF; 
-    background: rgba(255, 255, 255, 0.1); 
-    border-radius: 15px; margin-bottom: 20px; 
-    animation: titlePulse 3s infinite alternate ease-in-out; 
+    font-size: 48px; color: #CC0000; text-shadow: 3px 3px #FFFFFF; 
+    padding: 10px; border: 3px solid #FFFFFF; background: rgba(255, 255, 255, 0.1); 
+    border-radius: 15px; margin-bottom: 20px; animation: titlePulse 3s infinite alternate ease-in-out; 
 }
-
 button { 
-    padding:15px 30px; margin:12px; 
-    font-size:22px; border:2px solid #FFFFFF; 
-    border-radius:10px; background:#CC0000; 
-    color:#FFFFFF; cursor:pointer; 
-    box-shadow:0 4px 15px rgba(0,0,0,0.5); 
-    transition: transform 0.1s, box-shadow 0.2s, background 0.2s; 
+    padding:15px 30px; margin:12px; font-size:22px; border:2px solid #FFFFFF; 
+    border-radius:10px; background:#CC0000; color:#FFFFFF; cursor:pointer; 
+    box-shadow:0 4px 15px rgba(0,0,0,0.5); transition: transform 0.1s, box-shadow 0.2s, background 0.2s; 
     opacity: 1;
 }
-button.settings { 
-    background: #FFCC00; color: #003300; 
-    font-size: 18px; padding: 10px 20px; margin-top: 20px; 
-}
-button:hover { 
-    transform: translateY(-4px) scale(1.02); 
-    box-shadow:0 8px 25px rgba(255,255,255,0.4); 
-    background: #E81010; 
-}
+button.settings { background: #FFCC00; color: #003300; font-size: 18px; padding: 10px 20px; margin-top: 20px; }
+button:hover { transform: translateY(-4px) scale(1.02); box-shadow:0 8px 25px rgba(255,255,255,0.4); background: #E81010; }
 button.settings:hover { background: #FFE050; color: #003300; }
 
+/* Canvas */
 canvas { 
-    background:#001; border:4px solid #CC0000; 
-    box-shadow: 0 0 20px #38761D; 
+    background:#001; border:4px solid #CC0000; box-shadow: 0 0 20px #38761D; 
     margin:auto; display:none; 
     image-rendering:pixelated; image-rendering: crisp-edges; 
     transition: opacity 0.5s ease-in; opacity: 0; 
 }
-
-/* Anpassung der Canvas-Größe für den mobilen Modus */
 body.mobile-mode #game {
-    width: 300px !important; /* Maximale Größe für kleine Bildschirme */
-    height: 300px !important;
-    border-width: 2px;
-    box-shadow: 0 0 10px #38761D;
+    width: 300px !important; height: 300px !important;
+    border-width: 2px; box-shadow: 0 0 10px #38761D;
 }
 
-#win, #gameOver { position:absolute; inset:0; display:none; place-items:center; background:rgba(0,0,0,0.85); font-size:40px; text-align:center; animation: fadeIn 0.4s ease-out forwards; opacity: 0; transition: opacity 0.4s ease-out; z-index: 50; }
+/* Popups */
+#win, #gameOver { 
+    position:absolute; inset:0; display:none; place-items:center; 
+    background:rgba(0,0,0,0.9); font-size:40px; text-align:center; 
+    animation: fadeIn 0.4s ease-out forwards; opacity: 0; 
+    transition: opacity 0.4s ease-out; z-index: 50; 
+}
 #win div, #gameOver div { padding: 40px; border-radius: 15px; box-shadow: 0 0 30px #FFFFFF; }
 #win { color:#FFCC00; text-shadow:3px 3px #CC0000; }
 #gameOver { color:#CC0000; text-shadow:3px 3px #FFFFFF; }
-.snowflake { width:4px; height:4px; border-radius: 50%; background:#FFFFFF; position:fixed; top:-10px; animation:fall linear infinite; image-rendering:pixelated; }
 
-/* Mobile Steuerung Styles - GRÖSSER & ROBUSTER */
+/* Mobile Steuerung */
 #controls {
     position: fixed; bottom: 0; left: 0;
-    width: 100%; height: 200px; /* Mehr Platz für Steuerung */
-    display: none; 
-    z-index: 1000;
+    width: 100%; height: 200px; display: none; z-index: 1000;
 }
 .control-btn {
-    position: absolute;
-    width: 90px; height: 90px; 
-    background: rgba(204, 0, 0, 0.9); 
-    color: white; font-size: 40px;
+    position: absolute; width: 90px; height: 90px; 
+    background: rgba(204, 0, 0, 0.9); color: white; font-size: 40px;
     border: 4px solid #FFCC00; border-radius: 15px;
     display: flex; justify-content: center; align-items: center;
-    user-select: none; touch-action: manipulation; /* Wichtig für Touch */
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    user-select: none; touch-action: manipulation; box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 #up-btn { top: 0px; left: 50%; transform: translateX(-50%); }
 #down-btn { bottom: 0px; left: 50%; transform: translateX(-50%); }
 #left-btn { top: 90px; left: calc(50% - 100px); }
 #right-btn { top: 90px; right: calc(50% - 100px); }
-/* Überlappt die Buttons, wenn die Bildschirmbreite unter 400px liegt, zentriert */
+
 @media screen and (max-width: 400px) {
-    #controls {
-        width: 90%;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    #up-btn { left: 50%; transform: translateX(-50%); }
-    #down-btn { left: 50%; transform: translateX(-50%); }
+    #controls { width: 90%; left: 50%; transform: translateX(-50%); }
     #left-btn { left: 0; top: 90px; }
     #right-btn { right: 0; top: 90px; }
 }
@@ -133,65 +107,41 @@ body.mobile-mode #game {
 <canvas id="game" width="600" height="600"></canvas>
 
 <div id="controls">
-    <div id="up-btn" class="control-btn" ontouchstart="setDirection('Up')">⬆️</div>
-    <div id="down-btn" class="control-btn" ontouchstart="setDirection('Down')">⬇️</div>
-    <div id="left-btn" class="control-btn" ontouchstart="setDirection('Left')">⬅️</div>
-    <div id="right-btn" class="control-btn" ontouchstart="setDirection('Right')">➡️</div>
+    <div id="up-btn" class="control-btn" ontouchstart="handleTouch(event, 'Up')">⬆️</div>
+    <div id="down-btn" class="control-btn" ontouchstart="handleTouch(event, 'Down')">⬇️</div>
+    <div id="left-btn" class="control-btn" ontouchstart="handleTouch(event, 'Left')">⬅️</div>
+    <div id="right-btn" class="control-btn" ontouchstart="handleTouch(event, 'Right')">➡️</div>
 </div>
 
-<div id="win">
-  <div>
-    🎉 Level geschafft! 🎉<br><br>
-    <button onclick="closeWin()">Weiter</button>
-  </div>
-</div>
-
-<div id="gameOver">
-  <div>
-    💥 GAME OVER 💥<br>
-    Du bist kollidiert!<br><br>
-    <button onclick="retryGame()" style="background:#38761D; color:#FFFFFF;">🔄 Erneut versuchen</button>
-    <button onclick="closeGameOver()">Zurück zum Menü</button>
-  </div>
-</div>
+<div id="win"><div>🎉 Level geschafft! 🎉<br><br><button onclick="closeWin()">Weiter</button></div></div>
+<div id="gameOver"><div>💥 GAME OVER 💥<br>Du bist kollidiert!<br><br><button onclick="retryGame()" style="background:#38761D; color:#FFFFFF;">🔄 Erneut versuchen</button><button onclick="closeGameOver()">Zurück zum Menü</button></div></div>
 
 <script>
-/* SPIELKONFIGURATION */
 const CELL_SIZE = 30; 
 let FIELD_SIZE = 600; 
 let lightColorIndex = 0;
 const lightColors = ["#CC0000", "#38761D", "#FFCC00", "#FFFFFF"]; 
-let frameCount = 0;
-let mobileControlsActive = false; // Steuerung ist Teil des mobilen Modus
-let currentCountdown = 0; // Für den Countdown
-let gameIsRunning = false; // Neuer Status-Flag
 
-/* DOM-ELEMENTE */
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const controls = document.getElementById("controls");
 const mobileToggleBtn = document.getElementById("mobileToggleBtn");
 const body = document.body;
 
-/* HANDY-MODUS LOGIK */
-function toggleMobileMode(){
-    mobileControlsActive = !mobileControlsActive;
+let snake=[], dx=CELL_SIZE, dy=0;
+let goodFood, badFood; 
+let tickTimer=null;
+let scoreGoal=5;
+let gameSpeed = 120;
+let currentLevel = 1; 
+let mobileControlsActive = false;
+let currentCountdown = 0;
 
-    if(mobileControlsActive){
-        body.classList.add('mobile-mode');
-        mobileToggleBtn.innerText = "🖥️ Mobiler Modus deaktivieren";
-        alert("Mobiler Modus aktiviert! Das Spielfeld wird für Handys optimiert.");
-    } else {
-        body.classList.remove('mobile-mode');
-        mobileToggleBtn.innerText = "📱 Mobiler Modus aktivieren";
-        if (canvas.style.display === 'block') {
-             canvas.style.width = FIELD_SIZE + 'px';
-             canvas.style.height = FIELD_SIZE + 'px';
-        }
-    }
+// --- TOUCH-HANDLING (FIX) ---
+function handleTouch(event, direction) {
+    event.preventDefault(); // Wichtig: Verhindert Scrollen und Zoom
+    setDirection(direction);
 }
-
-/* MOBILE/TASTATUR STEUERUNG */
 function setDirection(key) {
     if(key === 'Up' && dy === 0 && dx !== 0){ dx = 0; dy = -CELL_SIZE; }
     else if(key === 'Down' && dy === 0 && dx !== 0){ dx = 0; dy = CELL_SIZE; }
@@ -199,61 +149,63 @@ function setDirection(key) {
     else if(key === 'Right' && dx === 0 && dy !== 0){ dx = CELL_SIZE; dy = 0; }
 }
 
-/* LEVEL START (Countdown hinzugefügt) */
+// --- MOBILER MODUS ---
+function toggleMobileMode(){
+    mobileControlsActive = !mobileControlsActive;
+    if(mobileControlsActive){
+        body.classList.add('mobile-mode');
+        mobileToggleBtn.innerText = "🖥️ Mobiler Modus deaktivieren";
+        alert("Mobiler Modus aktiviert! Das Spielfeld wird für Handys optimiert.");
+    } else {
+        body.classList.remove('mobile-mode');
+        mobileToggleBtn.innerText = "📱 Mobiler Modus aktivieren";
+    }
+}
+
+// --- SPIEL START & RESET ---
 function startLevel(level){
   const menu = document.getElementById("menu");
   currentLevel = level; 
-  gameIsRunning = false; // Spiel startet noch nicht
   
-  // Setze die Größe
+  // 1. Größe bestimmen
   FIELD_SIZE = level <= 2 ? 600 : level === 3 ? 660 : 720;
-  canvas.width = FIELD_SIZE;
-  canvas.height = FIELD_SIZE;
+  canvas.width = canvas.height = FIELD_SIZE;
   if (!mobileControlsActive) {
-    canvas.style.width = FIELD_SIZE + 'px';
-    canvas.style.height = FIELD_SIZE + 'px';
+    canvas.style.width = canvas.style.height = FIELD_SIZE + 'px';
   }
 
-  // Setze Spiel-Parameter
+  // 2. Initialisierung
   scoreGoal = level===1 ? 5 : level===2 ? 10 : level===3 ? 20 : level===4 ? 30 : 40; 
   gameSpeed = level===1 ? 140 : level===2 ? 100 : level===3 ? 120 : level===4 ? 90 : 80;
-
-  // Initialisiere Schlange und Essen, bevor das Menü ausgeblendet wird
+  
   const startPos = Math.floor(FIELD_SIZE / 2 / CELL_SIZE) * CELL_SIZE;
   snake=[{x: startPos, y: startPos}];
   dx=CELL_SIZE; dy=0;
   placeGoodFood(); 
   placeBadFood();
 
-  // Steuerung anzeigen
+  // 3. UI-Wechsel
   controls.style.display = mobileControlsActive ? 'block' : 'none';
-
   menu.style.opacity = 0;
   
   setTimeout(() => {
     menu.style.display = "none";
     document.getElementById("win").style.display="none";
     document.getElementById("gameOver").style.display="none";
-    
     canvas.style.display="block";
     setTimeout(() => { canvas.style.opacity = 1; }, 50); 
-    
-    // Startet den Countdown
     startCountdown();
   }, 400); 
 }
 
-/* 5-SEKUNDEN COUNTDOWN LOGIK */
 function startCountdown() {
-    currentCountdown = 5; // Start bei 5
+    currentCountdown = 5; 
     if(tickTimer) clearInterval(tickTimer);
     
-    // Countdown-Loop: Zeichnet alle 1 Sekunde
     tickTimer = setInterval(() => {
-        // Zeichne das Spielfeld mit Schlange/Essen, aber überlagere mit Countdown
-        drawGame(true); 
+        drawGame(true); // Zeichne mit Countdown-Overlay
         
-        if (currentCountdown < 0) { // GO! wird 1 Sekunde lang angezeigt (bei currentCountdown == 0)
+        if (currentCountdown < 0) { 
             clearInterval(tickTimer);
             resetGame(); // Startet das Spiel
         } else {
@@ -262,22 +214,17 @@ function startCountdown() {
     }, 1000);
 }
 
-
-/* SPIEL LOGIK & ZEICHNEN */
 function resetGame(){
-  // Die Initialisierung ist bereits in startLevel passiert.
-  // Jetzt wird nur noch der Timer für das Laufen des Spiels gestartet.
-  gameIsRunning = true;
   if(tickTimer) clearInterval(tickTimer);
-  // Startet die Haupt-GameLoop mit der Level-Geschwindigkeit
   tickTimer=setInterval(gameLoop, gameSpeed);
 }
+
+// --- GAME LOOP & LOGIK ---
 function gameLoop(){
   if (checkCollision()) { showGameOver(); return; }
   moveSnake();
-  drawGame(false); // Zeichne ohne Countdown
+  drawGame(false); 
 }
-// (Unveränderte Funktionen für moveSnake, checkCollision, placeFood, drawBorderLights)
 
 function checkCollision() {
   const head = {x: snake[0].x + dx, y: snake[0].y + dy};
@@ -287,6 +234,7 @@ function checkCollision() {
   }
   return false;
 }
+
 function moveSnake(){
   const head={x:snake[0].x+dx, y:snake[0].y+dy};
   snake.unshift(head);
@@ -312,36 +260,37 @@ function getFreeCell() {
       y:Math.floor(Math.random()*maxCells)*CELL_SIZE
     };
     const isSnake = snake.some(segment => segment.x === newPos.x && segment.y === newPos.y);
-    const isGood = goodFood && goodFood.x === newPos.x && goodFood.y === goodFood.y;
-    const isBad = badFood && badFood.x === newPos.x && badFood.y === badFood.y;
-    isFree = !isSnake && !isGood && !isBad;
+    const isFood = (goodFood && goodFood.x === newPos.x && goodFood.y === newPos.y) || (badFood && badFood.x === newPos.x && badFood.y === newPos.y);
+    isFree = !isSnake && !isFood;
   } while (!isFree);
   return newPos;
 }
 function placeGoodFood(){ goodFood = getFreeCell(); }
 function placeBadFood(){ badFood = getFreeCell(); }
 
+// --- ZEICHNEN ---
 function drawBorderLights() {
-    if (frameCount % 3 === 0) {
+    // Lichterketten-Effekt
+    if (++frameCount % 2 === 0) { // Etwas schnellerer Farbwechsel
         lightColorIndex = (lightColorIndex + 1) % lightColors.length;
     }
     const color = lightColors[lightColorIndex];
     const borderSize = 3;
-    const lightSize = 3; 
+    const lightSize = 4; 
     
     ctx.fillStyle = color;
 
-    for (let x = 0; x < FIELD_SIZE; x += CELL_SIZE) {
-        ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, 0, lightSize, borderSize); 
-        ctx.fillRect(x + CELL_SIZE / 2 - lightSize / 2, FIELD_SIZE - borderSize, lightSize, borderSize); 
+    // Oben und Unten
+    for (let x = CELL_SIZE/2; x < FIELD_SIZE; x += CELL_SIZE) {
+        ctx.fillRect(x - lightSize / 2, 0, lightSize, borderSize); 
+        ctx.fillRect(x - lightSize / 2, FIELD_SIZE - borderSize, lightSize, borderSize); 
     }
-    for (let y = 0; y < FIELD_SIZE; y += CELL_SIZE) {
-        ctx.fillRect(0, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); 
-        ctx.fillRect(FIELD_SIZE - borderSize, y + CELL_SIZE / 2 - lightSize / 2, borderSize, lightSize); 
+    // Links und Rechts
+    for (let y = CELL_SIZE/2; y < FIELD_SIZE; y += CELL_SIZE) {
+        ctx.fillRect(0, y - lightSize / 2, borderSize, lightSize); 
+        ctx.fillRect(FIELD_SIZE - borderSize, y - lightSize / 2, borderSize, lightSize); 
     }
-    frameCount++;
 }
-
 
 function drawGame(isCountdown){
   ctx.fillStyle="#001";
@@ -350,63 +299,70 @@ function drawGame(isCountdown){
   drawBorderLights(); 
 
   const C = CELL_SIZE; 
+  const c = C/2;
 
+  // Score
   const currentScore = snake.length - 1;
   ctx.fillStyle = currentScore < 0 ? "#CC0000" : "#FFFFFF"; 
   ctx.font = "18px 'Arial Black'"; 
   ctx.fillText(`Score: ${currentScore} / ${scoreGoal}`, 10, 25);
 
 
-  /* 1. GUTES GESCHENK (Zeichnung) */
+  /* 1. GUTES GESCHENK (Detaillierte Zeichnung) */
   if (goodFood) {
     const G_X = goodFood.x;
     const G_Y = goodFood.y;
-    ctx.fillStyle="#CC0000"; 
-    ctx.fillRect(G_X, G_Y, C, C);
-    ctx.fillStyle="#FFCC00"; 
-    ctx.fillRect(G_X, G_Y + C/2 - 4, C, 8); 
-    ctx.fillRect(G_X + C/2 - 4, G_Y, 8, C); 
-    ctx.fillRect(G_X + 4, G_Y + 4, 8, 8); 
-    ctx.fillRect(G_X + C - 12, G_Y + 4, 8, 8); 
-    ctx.fillRect(G_X + C/2 - 4, G_Y + C/2 - 4, 8, 8); 
+    ctx.fillStyle="#990000"; // Dunkelrot
+    ctx.fillRect(G_X + 2, G_Y + 2, C - 4, C - 4);
+    ctx.fillStyle="#CC0000"; // Rot
+    ctx.fillRect(G_X + 4, G_Y + 4, C - 8, C - 8);
+    ctx.fillStyle="#FFCC00"; // Goldband
+    ctx.fillRect(G_X, G_Y + c - 3, C, 6); 
+    ctx.fillRect(G_X + c - 3, G_Y, 6, C); 
+    ctx.fillStyle="#FFFFFF"; // Schleife
+    ctx.fillRect(G_X + 6, G_Y + 6, 4, 4);
+    ctx.fillRect(G_X + C - 10, G_Y + 6, 4, 4);
   }
 
-  /* 2. BÖSES GESCHENK: Gezeichneter Lebkuchenmann */
+  /* 2. BÖSES GESCHENK: Lebkuchenmann (Detaillierte Zeichnung) */
   if (badFood) {
     const B_X = badFood.x;
     const B_Y = badFood.y;
-    ctx.fillStyle = '#654321'; 
-    ctx.fillRect(B_X + 5, B_Y + 5, C - 10, C - 10); 
-    ctx.fillStyle = '#FFFFFF'; 
-    ctx.fillRect(B_X + 8, B_Y + 5, C - 16, C - 18); 
-    ctx.fillStyle = '#000000'; 
-    ctx.fillRect(B_X + 10, B_Y + 9, 3, 3);
-    ctx.fillRect(B_X + 17, B_Y + 9, 3, 3);
-    ctx.fillStyle = '#FFFFFF'; 
-    ctx.beginPath();
-    ctx.arc(B_X + C / 2, B_Y + 22, 5, 0, Math.PI, true); 
-    ctx.fill();
+    ctx.fillStyle = '#654321'; // Lebkuchenbraun
+    ctx.fillRect(B_X + 4, B_Y + 4, C - 8, C - 8); 
+    ctx.fillStyle = '#FFFFFF'; // Zuckerguss
+    ctx.fillRect(B_X + 6, B_Y + 4, C - 12, 18); 
+    ctx.fillStyle = '#000000'; // Augen
+    ctx.fillRect(B_X + 8, B_Y + 8, 3, 3);
+    ctx.fillRect(B_X + 19, B_Y + 8, 3, 3);
+    ctx.fillStyle = '#CC0000'; // Knopf 1
+    ctx.fillRect(B_X + 13, B_Y + 14, 4, 4);
+    ctx.fillStyle = '#38761D'; // Knopf 2
+    ctx.fillRect(B_X + 13, B_Y + 20, 4, 4);
   }
   
-  /* 3. SNAKE KOPF & KÖRPER */
+  /* 3. SNAKE KOPF & KÖRPER (Detailliert) */
   for(let i=0;i<snake.length;i++){
     const s=snake[i];
 
     if(i===0){
-        // Kopf: Gezeichnete rote Weihnachtsmütze
-        ctx.fillStyle="#CC0000"; 
+        // Kopf: Weihnachtsmütze & Augen
+        ctx.fillStyle="#CC0000"; // Rot
         ctx.fillRect(s.x, s.y, C, C);
-        ctx.fillStyle="#FFFFFF"; 
-        ctx.fillRect(s.x, s.y + 4, C, 4);
-        ctx.fillStyle="#38761D"; 
+        ctx.fillStyle="#FFFFFF"; // Mützenrand
+        ctx.fillRect(s.x, s.y + 3, C, 5);
+        ctx.fillStyle="#38761D"; // Grüne Haut
         ctx.fillRect(s.x, s.y + 8, C, C - 8);
-        ctx.fillStyle="#000000"; 
-        ctx.fillRect(s.x + 8, s.y + 12, 4, 4);
-        ctx.fillRect(s.x + 18, s.y + 12, 4, 4);
+        
+        ctx.fillStyle="#000000"; // Augen
+        ctx.fillRect(s.x + 6, s.y + 12, 4, 4);
+        ctx.fillRect(s.x + 20, s.y + 12, 4, 4);
     } else {
-      // Körper: Helles Grün
+      // Körper: Grüner Segment mit Schatten
       ctx.fillStyle="#38761D"; 
       ctx.fillRect(s.x + 3, s.y + 3, C - 6, C - 6);
+      ctx.fillStyle="#205010"; // Schatten
+      ctx.fillRect(s.x + 3, s.y + C - 6, C - 6, 3);
     }
   }
 
@@ -425,11 +381,8 @@ function drawGame(isCountdown){
   }
 }
 
-/* SCREEN LOGIK & STEUERUNG */
-function hideUI(){ controls.style.display = 'none'; }
-function showUI(){ controls.style.display = mobileControlsActive ? 'block' : 'none'; }
-
-function showWin(){ clearInterval(tickTimer); document.getElementById("win").style.display="grid"; document.getElementById("win").style.opacity = 1; hideUI(); gameIsRunning = false; }
+// --- STANDARD-FUNKTIONEN (Unverändert) ---
+function showWin(){ clearInterval(tickTimer); document.getElementById("win").style.display="grid"; document.getElementById("win").style.opacity = 1; controls.style.display = 'none'; }
 function closeWin(){
   document.getElementById("win").style.opacity = 0;
   setTimeout(() => {
@@ -437,10 +390,10 @@ function closeWin(){
     document.getElementById("menu").style.display="grid";
     document.getElementById("menu").style.opacity = 1; 
     canvas.style.display="none"; canvas.style.opacity = 0;
-    showUI();
+    controls.style.display = mobileControlsActive ? 'block' : 'none';
   }, 400); 
 }
-function showGameOver(){ clearInterval(tickTimer); document.getElementById("gameOver").style.display="grid"; document.getElementById("gameOver").style.opacity = 1; hideUI(); gameIsRunning = false; }
+function showGameOver(){ clearInterval(tickTimer); document.getElementById("gameOver").style.display="grid"; document.getElementById("gameOver").style.opacity = 1; controls.style.display = 'none'; }
 function closeGameOver(){
   document.getElementById("gameOver").style.opacity = 0;
   setTimeout(() => {
@@ -448,7 +401,7 @@ function closeGameOver(){
     document.getElementById("menu").style.display="grid";
     document.getElementById("menu").style.opacity = 1; 
     canvas.style.display="none"; canvas.style.opacity = 0;
-    showUI();
+    controls.style.display = mobileControlsActive ? 'block' : 'none';
   }, 400); 
 }
 function retryGame() {
@@ -458,28 +411,16 @@ function retryGame() {
         startLevel(currentLevel); 
     }, 400); 
 }
-
-// Tastatursteuerung für Desktop
 document.addEventListener("keydown", e=>{
   if(e.key==="ArrowUp"){ setDirection('Up'); }
   else if(e.key==="ArrowDown"){ setDirection('Down'); }
   else if(e.key==="ArrowLeft"){ setDirection('Left'); }
   else if(e.key==="ArrowRight"){ setDirection('Right'); }
 });
-
-/* SCHNEE */
 setInterval(()=>{
-  const s=document.createElement('div');
-  s.className='snowflake';
-  s.style.left=Math.random()*100+'vw';
-  s.style.width = s.style.height = (2 + Math.random() * 4) + 'px';
-  s.style.animationDuration=(3+Math.random()*5)+'s';
-  s.style.opacity = 0.8 - Math.random() * 0.4;
-  document.body.appendChild(s);
+  const s=document.createElement('div'); s.style.left=Math.random()*100+'vw'; s.style.width = s.style.height = (2 + Math.random() * 4) + 'px'; s.style.animationDuration=(3+Math.random()*5)+'s'; s.style.opacity = 0.8 - Math.random() * 0.4; s.className='snowflake'; document.body.appendChild(s);
   setTimeout(()=>s.remove(),8000);
 },100);
-
-/* VOLLBILD */
 function toggleFullscreen() {
   const elem = document.documentElement;
   if (document.fullscreenElement) {
