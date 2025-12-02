@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>BLOCKSTRIKERS</title>
+
+<style>
+body{
+    margin:0;
+    background:#0d1117;
+    color:white;
+    overflow:hidden;
+    text-align:center;
+    font-family: Arial, sans-serif;
+}
+
+#ui{
+    position:absolute;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#161b22cc;
+    padding:10px;
+    border-radius:12px;
+}
+
+button{
+    padding:8px 14px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(90deg,#ff4d4d,#ff9900);
+    color:white;
+    font-size:16px;
+    margin:4px;
+}
+
+button:active{
+    transform:scale(.95);
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui">
+    <div id="score">Score: 0</div>
+    <div id="weapon">Waffe: Pistole</div>
+
+    <button onclick="unlockWeapon()">Waffe freischalten</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+let score = 0;
+
+let weapons = [
+    {name:"Pistole", power:1},
+    {name:"Shotgun", power:2},
+    {name:"Laser", power:4},
+    {name:"Plasma", power:6}
+];
+
+let weaponIndex = 0;
+
+let blocks = [];
+
+// BLOECKE SPAWNEN
+function spawnBlock(){
+    blocks.push({
+        x: Math.random() * (canvas.width - 70),
+        y: Math.random() * (canvas.height - 150) + 80,
+        size: 50 + Math.random()*25,
+        hp: weapons[weaponIndex].power + 1
+    });
+}
+
+setInterval(spawnBlock, 700);
+
+// RENDER
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    blocks.forEach(b=>{
+        let grd = ctx.createLinearGradient(
+            b.x,b.y,
+            b.x+b.size,b.y+b.size
+        );
+
+        grd.addColorStop(0,"#00f2ff");
+        grd.addColorStop(1,"#ff00dd");
+
+        ctx.fillStyle = grd;
+        ctx.fillRect(b.x,b.y,b.size,b.size);
+
+        ctx.fillStyle = "white";
+        ctx.font="14px Arial";
+        ctx.fillText(b.hp,b.x+12,b.y+25);
+    });
+
+    requestAnimationFrame(draw);
+}
+draw();
+
+// TREFFER ERKENNUNG
+function shoot(x,y){
+
+    blocks.forEach((b,i)=>{
+        if(
+            x > b.x &&
+            x < b.x + b.size &&
+            y > b.y &&
+            y < b.y + b.size
+        ){
+            b.hp -= weapons[weaponIndex].power;
+
+            if(b.hp <= 0){
+                blocks.splice(i,1);
+                score++;
+                document.getElementById("score").innerText = "Score: " + score;
+            }
+        }
+    });
+}
+
+// TOUCH & MAUS
+canvas.addEventListener("mousedown", e=>{
+   shoot(e.clientX,e.clientY);
+});
+
+canvas.addEventListener("touchstart", e=>{
+   let t = e.touches[0];
+   shoot(t.clientX,t.clientY);
+});
+
+// WAFFEN FREISCHALTEN
+function unlockWeapon(){
+
+    if(score >= 5 && weaponIndex < weapons.length-1){
+        score -= 5;
+        weaponIndex++;
+
+        document.getElementById("score").innerText="Score: "+score;
+        document.getElementById("weapon").innerText=
+            "Waffe: " + weapons[weaponIndex].name;
+
+    } else if(weaponIndex >= weapons.length-1){
+        alert("Alle Waffen freigeschaltet!");
+    } else {
+        alert("Mindestens 5 Punkte nötig!");
+    }
+}
+</script>
+
+</body>
+</html>
