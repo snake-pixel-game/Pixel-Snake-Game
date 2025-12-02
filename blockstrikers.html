@@ -1,166 +1,791 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>BLOCKSTRIKERS</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>BlockStrikers — Dino Jump</title>
 <style>
-body{
+  :root{
+    --bg:#0b1220;
+    --panel: rgba(255,255,255,0.06);
+    --accent:#1fb6ff;
+    --muted:#9aa8b2;
+  }
+  html,body{
+    height:100%;
     margin:0;
-    background:#0d1117;
-    color:white;
-    overflow:hidden;
-    text-align:center;
-    font-family: Arial, sans-serif;
-}
-
-#ui{
+    background: linear-gradient(180deg,#07101a 0%, #0b1220 100%);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -webkit-tap-highlight-color: transparent;
+    color: #e6f0f6;
+  }
+  #gameWrap{
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  canvas{
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action: manipulation;
+  }
+  #hud{
     position:absolute;
-    top:10px;
-    left:50%;
-    transform:translateX(-50%);
-    background:#161b22cc;
-    padding:10px;
+    top:12px;
+    left:12px;
+    background:var(--panel);
+    padding:8px 12px;
     border-radius:12px;
-}
-
-button{
-    padding:8px 14px;
-    border:none;
-    border-radius:10px;
-    background:linear-gradient(90deg,#ff4d4d,#ff9900);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  #hud .item{font-size:14px;}
+  #controls{
+    position:absolute;
+    top:12px;
+    right:12px;
+    display:flex;
+    gap:8px;
+  }
+  .btn{
+    background:linear-gradient(180deg,#1e2933,#0f1720);
     color:white;
-    font-size:16px;
-    margin:4px;
-}
-
-button:active{
-    transform:scale(.95);
-}
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:13px;
+    border: none;
+  }
+  #powerList{
+    position:absolute;
+    bottom:12px;
+    left:12px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .pwr{
+    background:var(--panel);
+    padding:6px 8px;
+    border-radius:10px;
+    font-size:13px;
+  }
+  #tip{
+    position:absolute;
+    bottom:12px;
+    right:12px;
+    color:var(--muted);
+    font-size:13px;
+    background:transparent;
+  }
 </style>
 </head>
-
 <body>
+<div id="gameWrap">
+  <canvas id="c"></canvas>
 
-<canvas id="game"></canvas>
+  <div id="hud">
+    <div class="item" id="score">Score: 0</div>
+    <div class="item" id="speed">Speed: 1.0x</div>
+    <div class="item" id="power">Power: —</div>
+  </div>
 
-<div id="ui">
-    <div id="score">Score: 0</div>
-    <div id="weapon">Waffe: Pistole</div>
+  <div id="controls">
+    <button class="btn" id="pauseBtn">Pause</button>
+    <button class="btn" id="restartBtn">Restart</button>
+  </div>
 
-    <button onclick="unlockWeapon()">Waffe freischalten</button>
+  <div id="powerList"></div>
+
+  <div id="tip">Tippe / Klicke zum Springen • Halten = höher springen</div>
 </div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* =========================
+   BlockStrikers — Jump'n'Run
+   Single file prototype
+   ========================= */
 
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+let DPR = Math.max(1, window.devicePixelRatio || 1);
 function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+  const w = innerWidth;
+  const h = innerHeight;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.width = Math.floor(w * DPR);
+  canvas.height = Math.floor(h * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0); // scale drawing to CSS px
 }
-window.addEventListener("resize", resize);
+addEventListener('resize', resize);
 resize();
 
+/* ---------- Game state ---------- */
+let running = true;
+let last = performance.now();
+let accum = 0;
 let score = 0;
+let worldSpeed = 6; // pixels per second baseline (scaled)
+let speedMultiplier = 1.0;
+let tick = 0;
 
-let weapons = [
-    {name:"Pistole", power:1},
-    {name:"Shotgun", power:2},
-    {name:"Laser", power:4},
-    {name:"Plasma", power:6}
+/* ---------- Utility ---------- */
+function rand(a,b){ return a + Math.random()*(b-a); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* ---------- Parallax background layers ---------- */
+const bgLayers = [
+  {z:0.2, colorA:'#071226', colorB:'#082033', shapes:[]},
+  {z:0.5, colorA:'#081a2a', colorB:'#0c2335', shapes:[]},
+  {z:0.9, colorA:'#0b2a3a', colorB:'#123a50', shapes:[]}
 ];
-
-let weaponIndex = 0;
-
-let blocks = [];
-
-// BLOECKE SPAWNEN
-function spawnBlock(){
-    blocks.push({
-        x: Math.random() * (canvas.width - 70),
-        y: Math.random() * (canvas.height - 150) + 80,
-        size: 50 + Math.random()*25,
-        hp: weapons[weaponIndex].power + 1
-    });
-}
-
-setInterval(spawnBlock, 700);
-
-// RENDER
-function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    blocks.forEach(b=>{
-        let grd = ctx.createLinearGradient(
-            b.x,b.y,
-            b.x+b.size,b.y+b.size
-        );
-
-        grd.addColorStop(0,"#00f2ff");
-        grd.addColorStop(1,"#ff00dd");
-
-        ctx.fillStyle = grd;
-        ctx.fillRect(b.x,b.y,b.size,b.size);
-
-        ctx.fillStyle = "white";
-        ctx.font="14px Arial";
-        ctx.fillText(b.hp,b.x+12,b.y+25);
-    });
-
-    requestAnimationFrame(draw);
-}
-draw();
-
-// TREFFER ERKENNUNG
-function shoot(x,y){
-
-    blocks.forEach((b,i)=>{
-        if(
-            x > b.x &&
-            x < b.x + b.size &&
-            y > b.y &&
-            y < b.y + b.size
-        ){
-            b.hp -= weapons[weaponIndex].power;
-
-            if(b.hp <= 0){
-                blocks.splice(i,1);
-                score++;
-                document.getElementById("score").innerText = "Score: " + score;
-            }
-        }
-    });
-}
-
-// TOUCH & MAUS
-canvas.addEventListener("mousedown", e=>{
-   shoot(e.clientX,e.clientY);
-});
-
-canvas.addEventListener("touchstart", e=>{
-   let t = e.touches[0];
-   shoot(t.clientX,t.clientY);
-});
-
-// WAFFEN FREISCHALTEN
-function unlockWeapon(){
-
-    if(score >= 5 && weaponIndex < weapons.length-1){
-        score -= 5;
-        weaponIndex++;
-
-        document.getElementById("score").innerText="Score: "+score;
-        document.getElementById("weapon").innerText=
-            "Waffe: " + weapons[weaponIndex].name;
-
-    } else if(weaponIndex >= weapons.length-1){
-        alert("Alle Waffen freigeschaltet!");
-    } else {
-        alert("Mindestens 5 Punkte nötig!");
+function initBg(){
+  bgLayers.forEach(layer=>{
+    layer.shapes = [];
+    const count = 8 + Math.floor(rand(0,8));
+    for(let i=0;i<count;i++){
+      layer.shapes.push({
+        x: rand(0, innerWidth),
+        y: rand(innerHeight*0.1, innerHeight*0.8),
+        w: rand(140, 420),
+        h: rand(40, 120),
+        rot: rand(-0.3, 0.3),
+        speed: rand(10,40)
+      });
     }
+  });
 }
-</script>
+initBg();
 
+/* ---------- Ground & perspective ----------
+   We'll create a road/ground that repeats and slightly tilts
+   to create a pseudo-3D perspective (scale objects by y).
+*/
+const ground = {
+  yRatio: 0.78, // where ground baseline sits (relative)
+  segments: [],
+  segW: 220
+};
+function initGround(){
+  ground.segments = [];
+  const count = Math.ceil(innerWidth / ground.segW) + 6;
+  for(let i=0;i<count;i++){
+    ground.segments.push({ x: i * ground.segW, color: i%2? '#1b2b35' : '#11222b'});
+  }
+}
+initGround();
+
+/* ---------- Player (blauer Dino, vector) ---------- */
+const player = {
+  x: innerWidth * 0.18,
+  baseY: innerHeight * ground.yRatio,
+  y: 0,
+  vy: 0,
+  w: 64,
+  h: 48,
+  grounded: true,
+  jumpPower: -13,
+  gravity: 0.8,
+  doubleJumpAvailable: false,
+  anim: 0,
+  rads: 0,
+  shield: 0,
+  magnet: 0,
+  boost: 0
+};
+
+function resetPlayer(){
+  player.baseY = innerHeight * ground.yRatio;
+  player.y = player.baseY;
+  player.vy = 0;
+  player.grounded = true;
+  player.doubleJumpAvailable = false;
+  player.anim = 0;
+  player.shield = 0;
+  player.magnet = 0;
+  player.boost = 0;
+}
+resetPlayer();
+
+/* ---------- Obstacles & PowerUps ---------- */
+let obstacles = [];
+let powerups = [];
+
+function spawnObstacle(){
+  // obstacles vary: spike / block / pillar
+  const type = Math.random() < 0.6 ? 'spike' : (Math.random()<0.7 ? 'box' : 'pillar');
+  const baseY = innerHeight * ground.yRatio;
+  const size = type === 'spike' ? 28 : (type === 'box' ? 48 : 80);
+  obstacles.push({
+    x: innerWidth + 60,
+    y: baseY - size,
+    w: size,
+    h: size,
+    type,
+    hit: false,
+    sway: rand(-0.2,0.2)
+  });
+}
+
+function spawnPowerup(){
+  const types = ['shield','magnet','boost','doublejump'];
+  const type = types[Math.floor(Math.random()*types.length)];
+  powerups.push({
+    x: innerWidth + 60,
+    y: innerHeight * (ground.yRatio - 0.28*Math.random() - 0.04),
+    size: 34,
+    type,
+    t: 0
+  });
+}
+
+/* spawn timings */
+let nextObstacle = 0;
+let nextPowerup = 3000; // ms
+
+/* ---------- Input: touch & mouse ---------- */
+let input = {down:false, downSince:0};
+
+function startJump(){
+  if(player.grounded){
+    player.vy = player.jumpPower * (player.boost?1.15:1);
+    player.grounded = false;
+    player.doubleJumpAvailable = true;
+    input.downSince = performance.now();
+  } else if(player.doubleJumpAvailable){
+    // double jump if available (or if doublejump power active)
+    if(player.doubleJumpAvailable || player.doublejumpPower){
+      player.vy = player.jumpPower * 0.9;
+      player.doubleJumpAvailable = false;
+    }
+  }
+}
+function endJump(){
+  // short hop if released early
+  const held = performance.now() - input.downSince;
+  if(held < 140 && player.vy < -6){
+    player.vy *= 0.6;
+  }
+}
+
+canvas.addEventListener('mousedown', e=>{
+  input.down = true;
+  startJump();
+});
+canvas.addEventListener('mouseup', e=>{
+  input.down = false;
+  endJump();
+});
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  input.down = true;
+  startJump();
+}, {passive:false});
+canvas.addEventListener('touchend', e=>{
+  input.down = false;
+  endJump();
+});
+
+/* ---------- HUD Buttons ---------- */
+document.getElementById('pauseBtn').addEventListener('click', ()=>{
+  running = !running;
+  document.getElementById('pauseBtn').innerText = running ? 'Pause' : 'Resume';
+  if(running) last = performance.now();
+});
+document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+function restartGame(){
+  score = 0;
+  worldSpeed = 6;
+  speedMultiplier = 1.0;
+  obstacles = [];
+  powerups = [];
+  nextObstacle = 300;
+  nextPowerup = 2000;
+  resetPlayer();
+  running = true;
+  document.getElementById('pauseBtn').innerText = 'Pause';
+}
+
+/* ---------- Collision ---------- */
+function rectHit(a,b){
+  return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
+}
+
+/* ---------- Game loop ---------- */
+function update(dt){
+  tick += dt;
+  // background movement (parallax)
+  bgLayers.forEach(layer=>{
+    layer.shapes.forEach(s=>{
+      s.x -= (worldSpeed * speedMultiplier) * layer.z * dt * 0.06;
+      if(s.x + s.w < -100){
+        s.x = innerWidth + rand(20, 300);
+        s.y = rand(innerHeight*0.05, innerHeight*0.7);
+      }
+    });
+  });
+
+  // ground movement (repeat segments)
+  for(let seg of ground.segments){
+    seg.x -= (worldSpeed * speedMultiplier) * dt;
+  }
+  // shift segments if gone
+  const segW = ground.segW;
+  if(ground.segments.length){
+    const first = ground.segments[0];
+    if(first.x + segW < -segW){
+      const last = ground.segments[ground.segments.length-1];
+      first.x = last.x + segW;
+      ground.segments.push(ground.segments.shift());
+    }
+  }
+
+  // player physics
+  player.vy += player.gravity;
+  player.y += player.vy;
+  const groundY = player.baseY - player.h;
+  if(player.y >= groundY){
+    player.y = groundY;
+    player.vy = 0;
+    player.grounded = true;
+  } else {
+    player.grounded = false;
+  }
+
+  // apply active power-ups timers
+  if(player.shield > 0) player.shield = Math.max(0, player.shield - dt*1000);
+  if(player.magnet > 0) player.magnet = Math.max(0, player.magnet - dt*1000);
+  if(player.boost > 0) player.boost = Math.max(0, player.boost - dt*1000);
+
+  // obstacle movement & collisions
+  for(let i = obstacles.length-1; i>=0; i--){
+    let o = obstacles[i];
+    o.x -= (worldSpeed * speedMultiplier) * dt * (1 + (o.sway*0.02));
+    // perspective scale by y (pseudo-3D): objects closer to ground appear larger
+    // collision box
+    const obRect = { x:o.x, y:o.y, w:o.w, h:o.h };
+    const plRect = { x:player.x, y:player.y, w:player.w, h:player.h };
+    if(rectHit(obRect, plRect) && !o.hit){
+      o.hit = true;
+      if(player.shield > 0){
+        // shield absorbs the hit
+        // small bounce effect
+        player.vy = -6;
+        // destroy obstacle
+        obstacles.splice(i,1);
+      } else {
+        // game over: restart quickly
+        running = false;
+        // flash & then restart after 800ms
+        setTimeout(restartGame, 700);
+      }
+    }
+
+    // remove off-screen
+    if(o.x + o.w < -100) obstacles.splice(i,1);
+  }
+
+  // powerup movement & collection
+  for(let i = powerups.length-1; i>=0; i--){
+    let p = powerups[i];
+    p.x -= (worldSpeed * speedMultiplier) * dt;
+    // magnet effect: attract to player if active or if player has magnet powerup
+    if(player.magnet > 0){
+      const dirx = (player.x + player.w*0.5) - p.x;
+      p.x += dirx * 0.02;
+    }
+    // collision
+    if(rectHit({x:p.x,y:p.y,w:p.size,h:p.size}, {x:player.x,y:player.y,w:player.w,h:player.h})){
+      applyPowerup(p.type);
+      powerups.splice(i,1);
+      score += 2; // small bonus
+    }
+    // offscreen
+    if(p.x + p.size < -80) powerups.splice(i,1);
+  }
+
+  // scoring: increase with time and speed
+  score += dt * (0.6 + speedMultiplier*0.4);
+  // speed up gradually based on score
+  speedMultiplier = 1 + Math.min(1.6, score / 350);
+  // dynamic world speed increment with boost
+  if(player.boost > 0) speedMultiplier *= 1.4;
+
+  // spawn logic
+  nextObstacle -= dt*1000;
+  if(nextObstacle <= 0){
+    spawnObstacle();
+    // spacing influenced by speed
+    const base = 650 - Math.min(320, score*1.2);
+    nextObstacle = Math.max(320, base + rand(-120, 220));
+  }
+  nextPowerup -= dt*1000;
+  if(nextPowerup <= 0){
+    spawnPowerup();
+    nextPowerup = 3000 + Math.random()*5000;
+  }
+}
+
+/* ---------- Apply powerup ---------- */
+function applyPowerup(type){
+  if(type === 'shield') {
+    player.shield = 2200; // 2.2s
+    showToast("Schild!");
+  } else if(type === 'magnet'){
+    player.magnet = 3500;
+    showToast("Magnet!");
+  } else if(type === 'boost'){
+    player.boost = 1400;
+    showToast("Boost!");
+  } else if(type === 'doublejump'){
+    player.doubleJumpAvailable = true;
+    player.doublejumpPower = true;
+    setTimeout(()=>{ player.doublejumpPower = false; }, 5000);
+    showToast("Doppel-Sprung!");
+  }
+}
+
+/* ---------- Visual helpers ---------- */
+let toasts = [];
+function showToast(text){
+  toasts.push({text, t:1600});
+}
+
+/* ---------- Draw ---------- */
+function draw(){
+  // clear
+  const W = innerWidth, H = innerHeight;
+  ctx.fillStyle = '#07101a';
+  ctx.fillRect(0,0,W,H);
+
+  // sky gradient
+  const sky = ctx.createLinearGradient(0,0,0,H*0.6);
+  sky.addColorStop(0, '#071226');
+  sky.addColorStop(1, '#082433');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H*0.6);
+
+  // parallax layers
+  bgLayers.forEach(layer=>{
+    // subtle gradient for layer
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, layer.colorA);
+    g.addColorStop(1, layer.colorB);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+    // shapes
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#0d2b3a';
+    for(let s of layer.shapes){
+      const sx = s.x % (W + 800) - 400;
+      ctx.save();
+      ctx.translate(sx, s.y);
+      ctx.rotate(s.rot);
+      // rounded rect block as stylized mountain/cloud
+      roundRect(ctx, -s.w*0.5, -s.h*0.5, s.w, s.h, 22);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  });
+
+  // ground perspective — draw repeating segments
+  const baseY = H * ground.yRatio;
+  for(let seg of ground.segments){
+    // compute perspective scale from seg's x (simple tilt effect)
+    const depth = clamp(1 - ((seg.x / W) * 0.15), 0.78, 1.08);
+    ctx.save();
+    const sx = seg.x % (ground.segW);
+    ctx.translate(seg.x, 0);
+    // rectangle strip
+    ctx.fillStyle = seg.color;
+    ctx.fillRect(seg.x, baseY, ground.segW, H - baseY);
+    // shimmer
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(seg.x, baseY+6, ground.segW, 6);
+    ctx.restore();
+  }
+
+  // perspective shadow strip (faux 3D)
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, baseY-20, 0, H);
+  grad.addColorStop(0, 'rgba(0,0,0,0.25)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, baseY-6, W, H);
+  ctx.restore();
+
+  // obstacles
+  for(let o of obstacles){
+    // draw spike or box with shadow and slight scale by y (pseudo-3D)
+    const scale = 1 + (( (H * ground.yRatio) - o.y) / 1000);
+    ctx.save();
+    const ox = o.x;
+    const oy = o.y;
+    // shadow
+    ctx.beginPath();
+    ctx.ellipse(ox + o.w*0.5, H * ground.yRatio + 6, o.w*0.6*scale, 9*scale, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fill();
+    // object
+    ctx.translate(ox, oy - (scale-1)*10);
+    if(o.type === 'spike'){
+      drawSpike(ctx, 0,0, o.w, o.h);
+    } else if(o.type === 'box'){
+      drawBox(ctx, 0,0, o.w, o.h);
+    } else {
+      drawPillar(ctx, 0,0,o.w,o.h);
+    }
+    ctx.restore();
+  }
+
+  // powerups
+  for(let p of powerups){
+    ctx.save();
+    // bobbing animation
+    const bob = Math.sin((performance.now()/300) + p.t)*4;
+    ctx.translate(p.x, p.y + bob);
+    drawPowerup(ctx, 0,0,p.size,p.type);
+    ctx.restore();
+  }
+
+  // player draw (blue dino)
+  drawPlayer(ctx, player.x, player.y, player.w, player.h, player);
+
+  // HUD update
+  document.getElementById('score').innerText = 'Score: ' + Math.floor(score);
+  document.getElementById('speed').innerText = 'Speed: ' + (speedMultiplier).toFixed(2) + 'x';
+  const pwrText = player.shield>0 ? 'Schild' : (player.magnet>0 ? 'Magnet' : (player.boost>0 ? 'Boost' : '—'));
+  document.getElementById('power').innerText = 'Power: ' + pwrText;
+
+  // power icons list
+  const pList = document.getElementById('powerList');
+  pList.innerHTML = '';
+  if(player.shield>0) pList.appendChild(makePwrEl('Schild', Math.ceil(player.shield/1000)+'s'));
+  if(player.magnet>0) pList.appendChild(makePwrEl('Magnet', Math.ceil(player.magnet/1000)+'s'));
+  if(player.boost>0) pList.appendChild(makePwrEl('Boost', Math.ceil(player.boost/1000)+'s'));
+
+  // toasts
+  for(let i = toasts.length-1; i>=0; i--){
+    const t = toasts[i];
+    t.t -= 16;
+    if(t.t <= 0) toasts.splice(i,1);
+  }
+  drawToasts(ctx);
+}
+
+/* ---------- Small UI helpers ---------- */
+function makePwrEl(name, sub){
+  const el = document.createElement('div');
+  el.className = 'pwr';
+  el.textContent = name + (sub ? ' · ' + sub : '');
+  return el;
+}
+
+/* ---------- Draw helper shapes ---------- */
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function drawSpike(ctx,x,y,w,h){
+  // single triangular spike with gradient
+  ctx.beginPath();
+  ctx.moveTo(x, y+h);
+  ctx.lineTo(x + w*0.5, y);
+  ctx.lineTo(x + w, y+h);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(x, y, x, y+h);
+  g.addColorStop(0, '#ffd34d');
+  g.addColorStop(1, '#ff7b4d');
+  ctx.fillStyle = g;
+  ctx.fill();
+  // highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.stroke();
+}
+function drawBox(ctx, x, y, w, h){
+  // 3D box-ish
+  ctx.save();
+  // front
+  const g = ctx.createLinearGradient(x, y, x, y+h);
+  g.addColorStop(0, '#2b90ff');
+  g.addColorStop(1, '#1b6fb8');
+  ctx.fillStyle = g;
+  roundRect(ctx, x, y, w, h, 6);
+  ctx.fill();
+  // top
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w*0.15, y - h*0.18);
+  ctx.lineTo(x + w*0.85, y - h*0.18);
+  ctx.lineTo(x + w, y);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fill();
+  ctx.restore();
+}
+function drawPillar(ctx,x,y,w,h){
+  const g = ctx.createLinearGradient(x, y, x, y+h);
+  g.addColorStop(0, '#4af');
+  g.addColorStop(1, '#0a5');
+  ctx.fillStyle = g;
+  roundRect(ctx,x,y,w,h,10);
+  ctx.fill();
+}
+
+/* Draw powerup icon */
+function drawPowerup(ctx,x,y,size,type){
+  ctx.save();
+  ctx.translate(x,y);
+  // base circle
+  ctx.beginPath();
+  ctx.arc(0,0,size*0.5,0,Math.PI*2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fill();
+  // icon
+  ctx.fillStyle = '#fff';
+  ctx.font = (size*0.38) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const sym = type === 'shield' ? '⛨' : (type==='magnet'?'⤧':(type==='boost'?'⚡':'⇈'));
+  ctx.fillText(sym, 0, 0);
+  ctx.restore();
+}
+
+/* Draw the blue dino (vector) */
+function drawPlayer(ctx, x, y, w, h, state){
+  ctx.save();
+  // simple bob while running
+  const bob = state.grounded ? Math.sin(performance.now()/160)*2 : 0;
+  ctx.translate(x, y + bob);
+  // shadow
+  ctx.beginPath();
+  ctx.ellipse(w*0.54, h+8, w*0.5, 10, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fill();
+
+  // body
+  ctx.save();
+  ctx.translate(w*0.1, h*0.1);
+  const bodyW = w*0.9, bodyH = h*0.9;
+  // body gradient
+  const g = ctx.createLinearGradient(0,0,0,bodyH);
+  g.addColorStop(0, '#47b3ff');
+  g.addColorStop(1, '#0076d6');
+  ctx.fillStyle = g;
+  roundRect(ctx, 0, 0, bodyW, bodyH, 18);
+  ctx.fill();
+
+  // belly
+  ctx.beginPath();
+  ctx.ellipse(bodyW*0.48, bodyH*0.6, bodyW*0.33, bodyH*0.25, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fill();
+
+  // eye
+  ctx.beginPath();
+  ctx.arc(bodyW*0.75, bodyH*0.28, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(bodyW*0.755, bodyH*0.28, 2.8, 0, Math.PI*2);
+  ctx.fillStyle = '#02325c';
+  ctx.fill();
+
+  // leg (simple)
+  ctx.fillStyle = '#035c96';
+  const footY = bodyH - 6 + (state.grounded ? 0 : 6);
+  roundRect(ctx, bodyW*0.12, footY, 18, 12, 6);
+  roundRect(ctx, bodyW*0.46, footY, 18, 12, 6);
+  ctx.fill();
+
+  // tail
+  ctx.beginPath();
+  ctx.moveTo(-6, bodyH*0.5);
+  ctx.quadraticCurveTo(-28, bodyH*0.55, -22, bodyH*0.36);
+  ctx.quadraticCurveTo(-16, bodyH*0.25, -6, bodyH*0.36);
+  ctx.fillStyle = '#0a6fb0';
+  ctx.fill();
+
+  ctx.restore();
+
+  // shield halo if active
+  if(state.shield > 0){
+    ctx.beginPath();
+    ctx.ellipse(w*0.36, h*0.36, w*0.9, h*0.9, 0, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(80,200,255,0.14)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/* Toasts */
+function drawToasts(ctx){
+  const baseX = innerWidth*0.5;
+  let y = 100;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = '18px sans-serif';
+  for(let t of toasts){
+    ctx.globalAlpha = clamp(t.t / 1600, 0, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    roundRect(ctx, baseX - 110, y - 22, 220, 44, 10);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText(t.text, baseX, y+2);
+    y += 54;
+  }
+  ctx.restore();
+}
+
+/* ---------- utility draw loop ---------- */
+function loop(now){
+  const dt = (now - last) / 16.6667; // 60fps scale
+  last = now;
+  if(running){
+    update(dt);
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+last = performance.now();
+requestAnimationFrame(loop);
+
+/* ---------- spawn initial obstacles/powerups ---------- */
+nextObstacle = 600;
+nextPowerup = 2400;
+
+/* ---------- handy listeners for high-dpi / orientation changes ---------- */
+addEventListener('orientationchange', ()=>{
+  setTimeout(()=>{ resize(); initGround(); initBg(); resetPlayer(); }, 300);
+});
+
+/* ---------- helper: draw an initial box to warm-up GPU ---------- */
+ctx.fillStyle = '#07101a';
+ctx.fillRect(0,0,10,10);
+
+/* ---------- small decorative: spawn some obstacles occasionally to make the world feel alive ---------- */
+/* (handled in update via spawnObstacle/spawnPowerup) */
+
+/* ========== END ========== */
+</script>
 </body>
 </html>
